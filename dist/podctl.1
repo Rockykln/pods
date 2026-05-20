@@ -1,0 +1,253 @@
+.TH PODCTL 1 "2026" "podctl 0.1.0" "User Commands"
+.SH NAME
+podctl \- control AirPods from the Linux terminal
+.SH SYNOPSIS
+.B podctl
+.RI [ options ]
+.I command
+.RI [ args ]
+.SH DESCRIPTION
+.B podctl
+is a command-line frontend for AirPods on Linux. It talks to the local
+audio stack (PipeWire/PulseAudio via
+.BR pactl (1))
+and to Bluetooth (BlueZ via
+.BR bluetoothctl (1)),
+and uses the Apple Accessory Protocol over an L2CAP channel for
+features the AirPods firmware exposes directly (listening modes,
+conversation awareness, button mappings, battery telemetry).
+.PP
+.B podctl
+runs daemon-first: when
+.BR podctld (1)
+is reachable on the per-user Unix socket
+.IR $XDG_RUNTIME_DIR/podctl.sock
+it routes through the daemon for instant, fresh responses. Otherwise it
+falls back to a standalone mode that handles audio and Bluetooth
+operations directly; AAP-only operations require the daemon and surface
+a clear error.
+.SH COMMANDS
+.SS Device state
+.TP
+.B status
+Full snapshot: model, battery, mode, settings, audio, bluetooth.
+.TP
+.B battery, b, bat
+Battery levels for left bud, right bud and case.
+.SS Listening modes
+.TP
+.BI "mode " "off|anc|transparency|adaptive"
+Switch listening mode. Adaptive requires AirPods Pro 2 or AirPods 4 ANC.
+.TP
+.BI "conv " "on|off"
+Conversation awareness (Pro 2 / AirPods 4 ANC only).
+.TP
+.BI "spatial " "off|fixed|head-tracked"
+Spatial audio mode.
+.SS Bud settings
+.TP
+.BI "ear " "on|off"
+In-ear auto-pause detection.
+.TP
+.BI "mic " "auto|left|right"
+Microphone selection.
+.TP
+.BI "loud-reduction " "on|off"
+Cap loud sound spikes (Apple's hearing-safety feature). The AAP setting
+ID for this is not yet pinned down; the verb currently returns
+"not implemented" on every device.
+.TP
+.BI "press " "left|right " "mode-cycle|siri|none"
+Stem press-and-hold action. Same status as
+.B loud-reduction
+above \(em verb is wired, AAP write is not.
+.TP
+.BI "tone " "on|off"
+Acoustic feedback on press. Same status as
+.B loud-reduction
+above.
+.TP
+.BI "rename " """name"""
+Change the Bluetooth name.
+.TP
+.BI "one-bud-anc " "on|off"
+Keep ANC active when only one bud is being worn (Pro 2).
+.TP
+.BI "auto-anc " "0..100"
+AutoANC / Adaptive Audio strength (Pro 2).
+.TP
+.BI "chime " "0..100"
+System tone / chime volume.
+.SS Bluetooth
+.TP
+.B connect, disconnect
+Bring the link up or down.
+.TP
+.B pair, unpair
+Pair or forget the AirPods.
+.TP
+.B list, ls
+List paired AirPods on this adapter.
+.TP
+.BI "auto-connect " "on|off"
+BlueZ trusted/auto-connect flag.
+.SS Audio
+.TP
+.BI "volume " "0..100"
+Set output volume on the AirPods sink.
+.TP
+.BI "mute " "on|off"
+Mute or unmute the AirPods sink.
+.TP
+.BI "profile " "high|headset|off"
+Bluetooth audio profile: high-fidelity A2DP, HSP/HFP headset, or off.
+.TP
+.BI "codec " "sbc|aac|aptx|ldac|..."
+Switch A2DP codec (availability depends on PipeWire build).
+.TP
+.B default
+Make the AirPods the system's default audio sink.
+.TP
+.BI "latency " "<ms>"
+Output latency offset; negative values delay audio.
+.SS Streaming
+.TP
+.B watch, w
+Live event stream until interrupt: connection, battery, in-ear, mode,
+button presses.
+.TP
+.BR "meter" " [" "--plain" "|" "--json" "] [" "--once" "] [" "--interval " N "] [" "--device " name ]
+Live RMS and peak dBFS of the audio currently routed to the AirPods.
+Software meter \(em measures the digital signal, not eardrum SPL.
+Requires
+.BR parec (1)
+from
+.IR pulseaudio-utils .
+.SS Misc
+.TP
+.B ping
+Daemon health check.
+.TP
+.BI "completion " "bash|zsh|fish"
+Emit shell completion script to standard output.
+.TP
+.BI "help " [ command ]
+Top-level help or detailed help for one verb.
+.TP
+.B version, --version, -V
+Print version and daemon status.
+.SS System
+.TP
+.BR "debug " [ --no-redact ]
+Paste-friendly diagnostic report. Redacts identifying data unless
+.B --no-redact
+is given.
+.TP
+.BI "debug emit-case-lid " "open|close"
+Emits a synthetic case-lid event for testing the popup. Requires the
+daemon.
+.TP
+.BI "tray " "start|stop|status|restart"
+Manage the
+.B podctl-tray
+status-bar icon (systemd user service). Connection and battery show in
+the tooltip. Left-click shows the popup by default; right-click opens
+the menu. The left-click action is configurable in
+.IR ~/.config/podctl/tray.toml
+.RB ( "left_click = popup|mode-cycle|toggle-anc-tr|menu" ).
+.TP
+.B popup
+Ask the running
+.B podctl-popup
+to show the bubble now (model, connection, battery, mode) \(em the same
+bubble shown on case-open, mode change, or connect.
+.TP
+.B reboot
+Restart the installed systemd user services
+.RB ( podctld ", " podctl-tray ", " podctl-popup ).
+No root required; units that are not installed are skipped.
+.TP
+.BR "install " [ --yes "] [" --no-daemon "] [" --no-completion "] [" --no-manpages "] [" --with-tray "] [" --with-popup ]
+Install binaries, completion, man pages and systemd user services to
+.IR ~/.local .
+No root required.
+.TP
+.BR "uninstall " [ --yes ]
+Remove everything
+.B install
+put in place. Idempotent.
+.IP
+If the running binary lives in a system bin dir (i.e. it was installed
+via the AUR
+.B podctl-bin
+or
+.B podctl-git
+package), this verb delegates to
+.B sudo pacman -R <pkg>
+instead and stops the user services first. Use
+.B --yes
+to skip the prompt; the sudo password prompt still appears.
+.SH OPTIONS
+.TP
+.B --json
+Emit responses as JSON instead of human-readable text. Useful in scripts.
+.TP
+.B --help, -h
+Print help (top-level or, after a verb, the verb's detailed page).
+.SH ENVIRONMENT
+.TP
+.B XDG_RUNTIME_DIR
+Daemon socket lives at
+.IB $XDG_RUNTIME_DIR /podctl.sock\fR.
+.TP
+.B XDG_CONFIG_HOME
+User configuration directory; the
+.B no-daemon
+opt-out marker lives at
+.IB $XDG_CONFIG_HOME /podctl/no-daemon\fR.
+.TP
+.B NO_BANNER
+When set, suppress the "running without daemon" banner.
+.TP
+.B RUST_LOG
+Sets daemon log level (default
+.IR info ).
+Example:
+.BR "RUST_LOG=debug podctld" .
+.SH EXIT STATUS
+Follows BSD
+.BR sysexits.h :
+.B 0
+on success,
+.B 64
+for a usage error,
+.B 65
+for malformed data,
+.B 69
+when a required service is unavailable,
+.B 70
+for an internal software error,
+.B 71
+for an OS error.
+.SH FILES
+.TP
+.I $XDG_RUNTIME_DIR/podctl.sock
+Daemon control socket (mode 0600, owner-only).
+.TP
+.I $XDG_CONFIG_HOME/podctl/
+User configuration directory.
+.TP
+.I ~/.config/systemd/user/podctld.service
+systemd user service unit (recommended).
+.SH SEE ALSO
+.BR podctld (1),
+.BR bluetoothctl (1),
+.BR pactl (1),
+.BR wpctl (1),
+.BR systemctl (1).
+.SH BUGS
+Report at the project's issue tracker on GitHub. The Apple Accessory
+Protocol is reverse-engineered; some byte layouts are best-effort and
+may differ between AirPods firmware revisions.
+.SH AUTHORS
+podctl contributors. Licensed under MIT OR Apache-2.0.

@@ -1,0 +1,68 @@
+[package]
+name = "podctl"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+description = "Linux CLI to control AirPods — battery, listening mode, conversation awareness, bluetooth connect/disconnect."
+readme = "README.md"
+keywords = ["airpods", "bluetooth", "cli", "linux"]
+categories = ["command-line-utilities", "hardware-support"]
+repository = "https://github.com/Rockykln/podctl"
+homepage = "https://github.com/Rockykln/podctl"
+documentation = "https://github.com/Rockykln/podctl#readme"
+publish = false
+# Helper files (help.rs, fmt.rs, completion.rs) live in src/bin/ alongside
+# the binary entry-points but are *modules* of those binaries, not their
+# own binaries. Disable autodiscovery so cargo doesn't try to compile them
+# stand-alone.
+autobins = false
+
+[[bin]]
+name = "podctl"
+path = "src/bin/podctl.rs"
+
+[[bin]]
+name = "podctld"
+path = "src/bin/podctld.rs"
+
+[[bin]]
+name = "podctl-tray"
+path = "src/bin/tray/mod.rs"
+
+[[bin]]
+name = "podctl-popup"
+path = "src/bin/popup/mod.rs"
+
+[lib]
+name = "podctl"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "signal", "process"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+
+# podctl-popup only: pure-Rust software rasteriser + TTF shaper. No GPU,
+# no GTK/Qt. The Apple-style case-open bubble is drawn into a CPU pixmap
+# and handed to a raw wl_shm / xcb backend.
+tiny-skia = "0.12"
+fontdue = "0.9"
+wayland-client = "0.31"
+wayland-protocols-wlr = { version = "0.3", features = ["client"] }
+x11rb = "0.13"
+
+# BlueZ + L2CAP are talked to directly: subprocess `bluetoothctl` for the
+# device-level ops (connect/disconnect/list/trust), `dbus-send` for the
+# Alias property write, and a hand-rolled raw `AF_BLUETOOTH` socket for
+# the AAP channel on PSM 0x1001. No external bluetooth crate.
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+debug = "line-tables-only"

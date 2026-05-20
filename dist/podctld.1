@@ -1,0 +1,59 @@
+.TH PODCTLD 1 "2026" "podctl 0.1.0" "User Commands"
+.SH NAME
+podctld \- AirPods control daemon
+.SH SYNOPSIS
+.B podctld
+.SH DESCRIPTION
+.B podctld
+is the long-running companion daemon for the
+.BR podctl (1)
+CLI. It holds the persistent state of the user's AirPods: the BlueZ
+device link, the L2CAP Apple Accessory Protocol channel, the audio
+output state, and a broadcast bus of live events that subscribed
+clients (e.g.
+.B podctl watch
+) consume.
+.PP
+The daemon listens on a per-user Unix-domain stream socket at
+.IR $XDG_RUNTIME_DIR/podctl.sock ,
+mode
+.IR 0600 .
+Requests are newline-delimited JSON; one request normally produces one
+response, except for
+.BR watch ,
+which produces a stream until the client disconnects.
+.PP
+.B podctld
+is optional. When it is not running,
+.BR podctl (1)
+falls back to a standalone path that handles audio and basic Bluetooth
+operations directly; live state (battery, in-ear, button events) and
+the
+.B watch
+subscription require the daemon.
+.SH ENVIRONMENT
+.TP
+.B RUST_LOG
+Log level filter (default
+.IR info ).
+Examples:
+.BR debug ,
+.BR "info,podctld=trace" .
+.TP
+.B XDG_RUNTIME_DIR
+Directory for the socket (default
+.IR /run/user/$UID ).
+.SH SIGNALS
+.TP
+.B SIGTERM, SIGINT
+Initiate graceful shutdown: drain in-flight requests, remove the socket
+file, exit 0.
+.SH FILES
+.TP
+.I $XDG_RUNTIME_DIR/podctl.sock
+The control socket.
+.SH SEE ALSO
+.BR podctl (1),
+.BR systemd.unit (5).
+.SH AUTHORS
+podctl contributors. Licensed under MIT OR Apache-2.0.

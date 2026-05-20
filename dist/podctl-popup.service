@@ -1,0 +1,29 @@
+[Unit]
+Description=AirPods case-open popup (podctl-popup)
+Documentation=man:podctl(1)
+After=graphical-session.target podctld.service
+PartOf=graphical-session.target
+Wants=podctld.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/podctl-popup
+Restart=on-failure
+RestartSec=2
+Environment=RUST_LOG=info
+SyslogIdentifier=podctl-popup
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,36 @@
+[Unit]
+Description=AirPods control daemon (podctl)
+Documentation=man:podctld(1) man:podctl(1)
+After=bluetooth.service pipewire.service
+Wants=bluetooth.service pipewire.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/podctld
+Restart=on-failure
+RestartSec=2
+# Default tracing level; override with `Environment="RUST_LOG=debug"`.
+Environment=RUST_LOG=info
+# Tag journal entries so `journalctl -t podctld` (or `--identifier=podctld`)
+# pulls only our lines.
+SyslogIdentifier=podctld
+
+# Sandboxing — daemon only needs DBus (BlueZ), a Unix socket in
+# $XDG_RUNTIME_DIR, and the bluetoothctl/pactl binaries.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+# ProtectHome would also block $XDG_RUNTIME_DIR (the socket location) per
+# systemd convention; leaving it off, the daemon only writes to that one
+# socket path inside the user's own runtime dir anyway.
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictNamespaces=true
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+
+[Install]
+WantedBy=default.target

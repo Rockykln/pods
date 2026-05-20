@@ -1,0 +1,38 @@
+# Build artifacts
+/target
+**/*.rs.bk
+
+# Lockfile is committed (binary crate, deterministic builds matter)
+# but per-user IDE bits aren't.
+.idea/
+.vscode/
+.zed/
+.claude/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Local env scratch
+.env
+.env.local
+*.tmp
+*.log
+
+# Nix / direnv
+.direnv/
+result
+result-*
+
+# Coverage / profiling
+*.profraw
+*.profdata
+tarpaulin-report.*
+
+# Internal-only working docs — not part of the public repo
+/PLANS/
+/PLANS/TEST-REPORT.md
+/RELEASE.md
+/docs/
+/examples/
+/packaging/
