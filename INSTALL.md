@@ -111,6 +111,40 @@ auto-detected:
 | GNOME Wayland (no layer-shell) | notification fallback |
 | X11 (i3, Xfce, MATE, …) | override-redirect window |
 
+## Multi-adapter hosts
+
+If `/sys/class/bluetooth` lists more than one `hci*` device and the
+default (first enumerated) is the wrong one for AirPods, pin the
+adapter explicitly:
+
+```
+export PODCTL_ADAPTER=hci1
+```
+
+The variable is read by `podctl rename` (D-Bus path resolution) and by
+any future code that needs an adapter id. Bluez itself still routes
+based on which adapter holds the paired device, so `connect` /
+`disconnect` aren't affected.
+
+## Optional: tell BlueZ the host is an Apple device
+
+A handful of AirPods features (most notably end-to-end Find My handoff
+and some Beats-specific toggles) only light up when the bud believes
+it's paired to a Mac. Linux can advertise itself as Apple's vendor ID
+by adding a single line to `/etc/bluetooth/main.conf`:
+
+```ini
+[General]
+DeviceID = bluetooth:004C:0000:0000
+```
+
+Then `sudo systemctl restart bluetooth` and re-pair. This is a
+host-wide change — *every* Bluetooth device sees the new vendor ID, so
+verify your other peripherals still pair correctly afterwards. podctl
+works without it; this is purely for the extras.
+
+Originally documented by [LibrePods](https://github.com/kavishdevar/librepods).
+
 ## Troubleshooting
 
 - "pactl not in PATH" → install the PulseAudio-utils / pipewire-pulse

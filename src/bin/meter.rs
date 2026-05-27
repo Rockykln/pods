@@ -143,6 +143,7 @@ fn bar(db: f64, width: usize) -> String {
 
 fn find_airpods_monitor() -> Option<String> {
     let out = Command::new("pactl")
+        .env("LC_ALL", "C")
         .args(["list", "short", "sources"])
         .output()
         .ok()?;

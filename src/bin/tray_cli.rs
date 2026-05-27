@@ -89,6 +89,7 @@ fn status() -> i32 {
 
 fn systemctl_is(verb: &str, unit: &str) -> Option<String> {
     let out = Command::new("systemctl")
+        .env("LC_ALL", "C")
         .args(["--user", verb, unit])
         .output()
         .ok()?;
@@ -98,6 +99,7 @@ fn systemctl_is(verb: &str, unit: &str) -> Option<String> {
 
 fn watcher_present() -> Option<bool> {
     let out = Command::new("dbus-send")
+        .env("LC_ALL", "C")
         .args([
             "--session",
             "--print-reply",

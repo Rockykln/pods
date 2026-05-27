@@ -186,7 +186,20 @@ pub fn install(args: &[String]) -> i32 {
     let mut daemon_enabled = false;
     let mut tray_enabled = false;
     let mut popup_enabled = false;
-    if !no_daemon {
+    let has_systemctl = have_systemctl();
+    if !no_daemon && !has_systemctl {
+        println!();
+        println!("note: systemctl not found — skipping systemd user service install.");
+        println!(
+            "      binaries are in {}; run 'podctld' to start the daemon manually,",
+            bin_dir.display()
+        );
+        println!("      or wire it into your init system (openrc, runit, s6, …).");
+    }
+    if (with_tray || with_popup) && !has_systemctl {
+        println!("      same for podctl-tray / podctl-popup — start them by hand.");
+    }
+    if !no_daemon && has_systemctl {
         let want_daemon =
             yes || confirm("Enable background daemon (battery + watch events)?", true);
         if want_daemon {
@@ -218,7 +231,7 @@ pub fn install(args: &[String]) -> i32 {
         }
     }
 
-    if with_tray {
+    if with_tray && has_systemctl {
         if let Some(parent) = tray_unit_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -241,7 +254,7 @@ pub fn install(args: &[String]) -> i32 {
         }
     }
 
-    if with_popup {
+    if with_popup && has_systemctl {
         if let Some(parent) = popup_unit_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -344,10 +357,13 @@ pub fn uninstall(args: &[String]) -> i32 {
     }
 
     // Stop services before removing units, otherwise systemd holds a
-    // reference to the now-vanished unit file.
-    let _ = run("systemctl", &["--user", "disable", "--now", "podctld"]);
-    let _ = run("systemctl", &["--user", "disable", "--now", "podctl-tray"]);
-    let _ = run("systemctl", &["--user", "disable", "--now", "podctl-popup"]);
+    // reference to the now-vanished unit file. Skip silently on
+    // non-systemd hosts — nothing to disable there.
+    if have_systemctl() {
+        let _ = run("systemctl", &["--user", "disable", "--now", "podctld"]);
+        let _ = run("systemctl", &["--user", "disable", "--now", "podctl-tray"]);
+        let _ = run("systemctl", &["--user", "disable", "--now", "podctl-popup"]);
+    }
 
     let mut rc = exitcode::OK;
 
@@ -360,7 +376,9 @@ pub fn uninstall(args: &[String]) -> i32 {
     // in ~/.local and ~/.config.
     xdg.purge();
 
-    let _ = run("systemctl", &["--user", "daemon-reload"]);
+    if have_systemctl() {
+        let _ = run("systemctl", &["--user", "daemon-reload"]);
+    }
 
     if rc == exitcode::OK {
         println!("removed.");
@@ -583,6 +601,16 @@ fn run(cmd: &str, args: &[&str]) -> io::Result<()> {
         return Err(io::Error::other(format!("{cmd} exit {status}")));
     }
     Ok(())
+}
+
+pub fn have_systemctl() -> bool {
+    Command::new("systemctl")
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
 }
 
 const BASH_COMPLETION: &str = include_str!("../../dist/completion/podctl.bash");

@@ -95,20 +95,24 @@ later by re-running `podctl install` (idempotent).
 
 ## Capabilities per model
 
-| Feature | 1/2/3 | 4 | 4 ANC | Pro | Pro 2 | Max |
-| --- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Battery L / R / C | ✓ | ✓ | ✓ | ✓ | ✓ | L / R |
-| ANC / Transparency | — | — | ✓ | ✓ | ✓ | ✓ |
-| Adaptive | — | — | ✓ | — | ✓ | — |
-| Conversation Awareness | — | — | ✓ | — | ✓ | — |
-| In-Ear Detection | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| Loud-Sound Reduction | — | — | ✓ | — | ✓ | ✓ |
-| Spatial Audio | 3 / 4 | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Press-and-Hold | — | — | ✓ | ✓ | ✓ | ✓ |
-| Microphone Selection | ✓ | ✓ | ✓ | ✓ | ✓ | — |
-| Rename | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Feature | 1/2/3 | 4 | 4 ANC | Pro | Pro 2 | Pro 3 | Max |
+| --- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Battery L / R / C | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | L / R |
+| ANC / Transparency | — | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Adaptive | — | — | ✓ | — | ✓ | ✓ | — |
+| Conversation Awareness | — | — | ✓ | — | ✓ | ✓ | — |
+| In-Ear Detection | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Loud-Sound Reduction | — | — | ✓ | — | ✓ | ✓ | ✓ |
+| Spatial Audio | 3 / 4 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Press-and-Hold | — | — | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Microphone Selection | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — |
+| Rename | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 Source of truth for this matrix is `src/caps.rs::Model::capabilities`.
+AirPods Max (2nd gen, `0x202D`) shares the original Max capability row.
+AirPods 4 (non-ANC) currently has no publicly-known Bluetooth product
+code — the bud still shows up via the BlueZ headphones icon but resolves
+to `Unknown` until a capture lands.
 
 `podctl` refuses commands the connected device can't do with a clear
 `not supported on <model>` error rather than silently failing.

@@ -287,7 +287,11 @@ fn parse_sink_mute(name: &str) -> bool {
 }
 
 fn pactl(args: &[&str]) -> anyhow::Result<String> {
+    // pactl's gettext-translated booleans ("Mute: yes" → "Mute: ja" on a
+    // German system) and translated mute/profile labels break the parser
+    // on non-C locales. Force C across the board.
     let out = Command::new("pactl")
+        .env("LC_ALL", "C")
         .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -302,6 +306,7 @@ fn pactl(args: &[&str]) -> anyhow::Result<String> {
 
 pub fn have_pactl() -> bool {
     Command::new("pactl")
+        .env("LC_ALL", "C")
         .arg("--version")
         .stdout(Stdio::null())
         .stderr(Stdio::null())

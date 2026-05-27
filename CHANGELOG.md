@@ -5,6 +5,34 @@ Versioning: [SemVer](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-27
+
+### Fixed
+- AirPods 4 (ANC) Bluetooth product code is `0x201B`, not `0x2026`. The
+  former mapping pointed at Beats Solo Buds; the new one is cross-checked
+  against The Apple Wiki and OpenPods. AirPods 4 (non-ANC) keeps no code
+  for now — no public PID has surfaced. `0x2025` (Beats Solo 4) and the
+  old `0x2026` (Beats Solo Buds) now resolve to `Unknown` instead of being
+  mis-identified as AirPods 4 variants.
+
+### Added
+- `AirPods Pro (3rd gen)` (`0x2027`) and `AirPods Max (2nd gen)`
+  (`0x202D`) — model variants plus capability matrix entries.
+- `PODCTL_ADAPTER=hciN` env override for multi-adapter hosts. Without it
+  the first `hci*` from `/sys/class/bluetooth` is used, same as before.
+- `podctl install` and `podctl uninstall` gracefully skip the systemd
+  steps on hosts without `systemctl` (Artix, Devuan, Void, embedded
+  rootfs), printing a clear note rather than failing.
+
+### Changed
+- All shell-outs to `pactl`, `bluetoothctl`, `dbus-send` and `systemctl`
+  now run with `LC_ALL=C`. Defends parsers against gettext-translated
+  output on non-English locales (e.g. German "ja"/"nein" instead of
+  "yes"/"no" for `pactl get-sink-mute`).
+- `INSTALL.md`: optional BlueZ `DeviceID` hint documented for users who
+  want their host to advertise as an Apple device (some buds expose more
+  features once they think they are paired to a Mac).
+
 ## [0.1.0] - 2026-05-20
 
 First public release.

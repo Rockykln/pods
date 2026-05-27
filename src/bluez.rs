@@ -129,6 +129,7 @@ pub fn set_alias(addr: &str, alias: &str) -> anyhow::Result<()> {
     let dev_path = format!("/org/bluez/{}/dev_{}", adapter, addr.replace(':', "_"));
     let variant = format!("variant:string:{alias}");
     let out = Command::new("dbus-send")
+        .env("LC_ALL", "C")
         .args([
             "--system",
             "--print-reply",
@@ -151,6 +152,13 @@ pub fn set_alias(addr: &str, alias: &str) -> anyhow::Result<()> {
 }
 
 fn first_adapter() -> Option<String> {
+    // Multi-adapter override: `PODCTL_ADAPTER=hci1` pins the adapter
+    // regardless of enumeration order. Empty value behaves like unset.
+    if let Ok(val) = std::env::var("PODCTL_ADAPTER")
+        && !val.trim().is_empty()
+    {
+        return Some(val.trim().to_string());
+    }
     std::fs::read_dir("/sys/class/bluetooth")
         .ok()?
         .filter_map(|e| e.ok())
@@ -216,7 +224,11 @@ pub fn bt_state(s: &DeviceSummary) -> BtState {
 }
 
 fn bluetoothctl(args: &[&str]) -> anyhow::Result<String> {
+    // Force C locale so booleans like "yes"/"no" and field labels
+    // ("Connected:", "Modalias:", …) are stable across distros even if a
+    // future bluez version picks up a gettext catalog for them.
     let out = Command::new("bluetoothctl")
+        .env("LC_ALL", "C")
         .args(args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -231,6 +243,7 @@ fn bluetoothctl(args: &[&str]) -> anyhow::Result<String> {
 
 pub fn have_bluetoothctl() -> bool {
     Command::new("bluetoothctl")
+        .env("LC_ALL", "C")
         .arg("--version")
         .stdout(Stdio::null())
         .stderr(Stdio::null())

@@ -11,29 +11,35 @@ pub enum Model {
     Pro,
     Pro2,
     Pro2UsbC,
+    Pro3,
     Max,
     MaxUsbC,
+    Max2,
     Unknown,
 }
 
 impl Model {
     /// Bluetooth Modalias product code → model. 0x2024 (Pro 2 USB-C) is
-    /// hardware-verified; the rest are from public reverse-engineering.
-    /// The AirPods 4 codes (0x2025/0x2026) are unconfirmed — an unknown
-    /// code still detects as AirPods (icon) and falls back to
-    /// `Capabilities::conservative`, so a wrong guess degrades safely.
+    /// hardware-verified; the rest cross-referenced against The Apple Wiki
+    /// Bluetooth PIDs page and OpenPods' BLE proximity-pair table.
+    ///
+    /// AirPods 4 (non-ANC) is intentionally not mapped — no public PID has
+    /// surfaced yet. An unknown code still detects as AirPods via the BlueZ
+    /// icon and falls back to `Capabilities::conservative`, so the bud
+    /// still shows up; only model-specific features are gated.
     pub fn from_code(code: u16) -> Self {
         match code {
             0x2002 => Model::Gen1,
             0x200F => Model::Gen2,
             0x2013 => Model::Gen3,
-            0x2025 => Model::Gen4,
-            0x2026 => Model::Gen4Anc,
+            0x201B => Model::Gen4Anc,
             0x200E => Model::Pro,
             0x2014 => Model::Pro2,
             0x2024 => Model::Pro2UsbC,
+            0x2027 => Model::Pro3,
             0x200A => Model::Max,
             0x201F => Model::MaxUsbC,
+            0x202D => Model::Max2,
             _ => Model::Unknown,
         }
     }
@@ -48,8 +54,10 @@ impl Model {
             Model::Pro => "AirPods Pro",
             Model::Pro2 => "AirPods Pro (2nd gen)",
             Model::Pro2UsbC => "AirPods Pro (2nd gen, USB-C)",
+            Model::Pro3 => "AirPods Pro (3rd gen)",
             Model::Max => "AirPods Max",
             Model::MaxUsbC => "AirPods Max (USB-C)",
+            Model::Max2 => "AirPods Max (2nd gen)",
             Model::Unknown => "AirPods (unknown model)",
         }
     }
@@ -107,7 +115,7 @@ impl Model {
                 has_rename: true,
                 has_tone_on_press: true,
             },
-            Model::Pro2 | Model::Pro2UsbC => Capabilities {
+            Model::Pro2 | Model::Pro2UsbC | Model::Pro3 => Capabilities {
                 model: self,
                 has_anc: true,
                 has_transparency: true,
@@ -124,7 +132,7 @@ impl Model {
                 has_rename: true,
                 has_tone_on_press: true,
             },
-            Model::Max | Model::MaxUsbC => Capabilities {
+            Model::Max | Model::MaxUsbC | Model::Max2 => Capabilities {
                 model: self,
                 has_anc: true,
                 has_transparency: true,
@@ -193,5 +201,51 @@ impl Capabilities {
 impl Default for Capabilities {
     fn default() -> Self {
         Capabilities::conservative(Model::Unknown)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn known_product_codes_resolve_to_their_model() {
+        assert_eq!(Model::from_code(0x2002), Model::Gen1);
+        assert_eq!(Model::from_code(0x200F), Model::Gen2);
+        assert_eq!(Model::from_code(0x2013), Model::Gen3);
+        assert_eq!(Model::from_code(0x200E), Model::Pro);
+        assert_eq!(Model::from_code(0x2014), Model::Pro2);
+        assert_eq!(Model::from_code(0x2024), Model::Pro2UsbC);
+        assert_eq!(Model::from_code(0x2027), Model::Pro3);
+        assert_eq!(Model::from_code(0x201B), Model::Gen4Anc);
+        assert_eq!(Model::from_code(0x200A), Model::Max);
+        assert_eq!(Model::from_code(0x201F), Model::MaxUsbC);
+        assert_eq!(Model::from_code(0x202D), Model::Max2);
+    }
+
+    #[test]
+    fn beats_pids_are_not_misread_as_airpods() {
+        // 0x2025 is Beats Solo 4, 0x2026 is Beats Solo Buds. They were
+        // previously (and wrongly) mapped to AirPods 4 / 4 ANC. Make sure
+        // neither resolves to a known AirPods model anymore.
+        assert_eq!(Model::from_code(0x2025), Model::Unknown);
+        assert_eq!(Model::from_code(0x2026), Model::Unknown);
+    }
+
+    #[test]
+    fn pro3_inherits_pro2_capabilities() {
+        let caps = Model::Pro3.capabilities();
+        assert!(caps.has_anc);
+        assert!(caps.has_adaptive);
+        assert!(caps.has_conv_awareness);
+        assert!(caps.has_loud_sound_reduction);
+    }
+
+    #[test]
+    fn max2_uses_max_capabilities() {
+        let caps = Model::Max2.capabilities();
+        assert!(caps.has_anc);
+        assert!(!caps.has_case_battery);
+        assert!(!caps.has_in_ear_detection);
     }
 }
